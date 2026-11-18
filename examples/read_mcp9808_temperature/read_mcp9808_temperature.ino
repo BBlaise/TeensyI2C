@@ -1,32 +1,45 @@
-// Read the MCP9808 ambient temperature once per second and print it in Celsius.
-#include <TeensyI2C.h>
+// Read an MCP9808 temperature over I2C and print it in degrees Fahrenheit once per second.
+#include <Arduino.h>
+#include "i2c_t3.h"
+#include "TeensyI2C.h"
 
-constexpr uint8_t sensorAddress = 0x18;
-constexpr uint8_t temperatureRegister = 0x05;
-TeensyI2C sensorBus(&Wire);
+namespace {
+const uint8_t default_MCP9808_address = 0b0011000;
+const uint8_t T_A = 0b00000101;
+uint8_t device_address = default_MCP9808_address;
+TeensyI2C i2c0(&Wire);
+
+// Read both temperature register bytes and convert the result to degrees Fahrenheit.
+float readTemperature(void){
+    uint8_t rx_bytes[2] = {};
+    float temperature = 0;
+
+    i2c0.i2cMasterRead(device_address, T_A, rx_bytes, 2);
+    uint16_t temperature_bits = (rx_bytes[0] << 8) | rx_bytes[1];
+
+    if (temperature_bits != 0xFFFF) {
+        // Mask the alert and sign bits, then apply the signed temperature offset.
+        temperature = temperature_bits & 0x0FFF;
+        temperature /= 16.0;
+        if (temperature_bits & 0x1000)
+            temperature -= 256;
+    }
+
+    temperature = temperature * 9.0 / 5.0 + 32.0;     // convert from degC to degF
+    return temperature;
+}
+}
 
 // Initialize the I2C bus and serial output.
-void setup() {
-    Wire.begin(I2C_MASTER, 0, I2C_PINS_18_19, I2C_PULLUP_EXT, 100000);
+void setup(){
+    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 100000);
+    delay(100);              // short delay to ensure IC starts up
     Serial.begin(115200);
 }
 
-// Read both register bytes and convert the signed temperature field to Celsius.
-void loop() {
-    // A short read leaves the buffer untouched. The sentinel encodes -256 C, outside the sensor's range.
-    uint8_t bytes[2] = {0x10, 0x00};
-    sensorBus.i2cMasterRead(sensorAddress, temperatureRegister, bytes, sizeof(bytes));
-    if (bytes[0] == 0x10 && bytes[1] == 0x00) {
-        Serial.println("Temperature read failed");
-    } else {
-        // Discard the three alert flags and sign-extend the 13-bit temperature.
-        int16_t rawTemperature = ((bytes[0] & 0x1F) << 8) | bytes[1];
-        if (rawTemperature & 0x1000) {
-            rawTemperature -= 0x2000;
-        }
-        Serial.print(rawTemperature / 16.0f, 4);
-        Serial.println(" C");
-    }
-
+// Print one temperature reading per second.
+void loop(){
+    float temperature = readTemperature();
+    Serial.println(temperature);
     delay(1000);
 }

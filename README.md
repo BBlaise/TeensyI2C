@@ -54,5 +54,5 @@ Reads send a STOP after selecting the register. A single-byte read returns zero 
 
 Connect an MCP9808 at address `0x18` to Teensy 3.6 SDA pin 18 and SCL pin 19. Use 3.3 V logic, a common ground, and pull-ups to 3.3 V on both bus lines. The breakout may already supply pull-ups.
 
-- [Read ambient temperature](examples/read_mcp9808_temperature/read_mcp9808_temperature.ino) — Reads two register bytes and prints the temperature in Celsius once per second.
-- [Set the resolution](examples/set_mcp9808_resolution/set_mcp9808_resolution.ino) — Writes a one-byte resolution setting and prints whether the readback matches. Open the serial monitor at 115200 baud and reset the board to repeat it.
+- [Read ambient temperature](examples/read_mcp9808_temperature/read_mcp9808_temperature.ino) — Reads two register bytes and prints the temperature in Fahrenheit once per second.
+- [Set the resolution](examples/set_mcp9808_resolution/set_mcp9808_resolution.ino) — Writes a one-byte resolution setting and prints its register code once per second. The selected 0.25 degrees Celsius setting reads back as 1.

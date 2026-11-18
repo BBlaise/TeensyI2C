@@ -1,31 +1,32 @@
-// Set the MCP9808 resolution to 0.25 C per bit and read the setting back.
-#include <TeensyI2C.h>
+// Set an MCP9808 to 0.25 degrees Celsius per bit and print its resolution register once per second.
+#include <Arduino.h>
+#include "i2c_t3.h"
+#include "TeensyI2C.h"
 
-constexpr uint8_t sensorAddress = 0x18;
-constexpr uint8_t resolutionRegister = 0x08;
-constexpr uint8_t quarterDegreeResolution = 0x01;
-TeensyI2C sensorBus(&Wire);
+namespace {
+const uint8_t default_MCP9808_address = 0b0011000;
+const uint8_t RESOLUTION = 0b00001000;
+const uint8_t res_0_25 = 0b01;
+uint8_t device_address = default_MCP9808_address;
+TeensyI2C i2c0(&Wire);
 
-// Initialize the bus, write the resolution, and report the readback.
-void setup() {
-    Wire.begin(I2C_MASTER, 0, I2C_PINS_18_19, I2C_PULLUP_EXT, 100000);
-    Serial.begin(115200);
-
-    // Give the USB serial monitor time to connect before printing once.
-    while (!Serial && millis() < 3000) {
-        delay(10);
-    }
-
-    sensorBus.i2cMasterWrite(sensorAddress, resolutionRegister, quarterDegreeResolution);
-    const uint8_t resolution = sensorBus.i2cMasterRead(sensorAddress, resolutionRegister);
-
-    // The requested setting is nonzero, so the read failure fallback cannot match it.
-    if (resolution == quarterDegreeResolution) {
-        Serial.println("Resolution readback: 0.25 C per bit");
-    } else {
-        Serial.println("Resolution readback did not match");
-    }
+// Write the selected resolution code to the sensor.
+void setResolution(uint8_t resolution_){
+    i2c0.i2cMasterWrite(device_address, RESOLUTION, resolution_);
+}
 }
 
-// The configuration and readback run once at startup.
-void loop() {}
+// Initialize the I2C bus and serial output, then set the sensor resolution.
+void setup(){
+    Wire.begin(I2C_MASTER, 0x00, I2C_PINS_18_19, I2C_PULLUP_EXT, 100000);
+    delay(100);              // short delay to ensure IC starts up
+    Serial.begin(115200);
+    setResolution(res_0_25);
+}
+
+// Print the resolution register code; the selected setting should read back as 1.
+void loop(){
+    uint8_t rx_bytes = i2c0.i2cMasterRead(device_address, RESOLUTION);
+    Serial.println(rx_bytes);
+    delay(1000);
+}
